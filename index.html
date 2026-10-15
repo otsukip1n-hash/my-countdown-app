@@ -142,6 +142,8 @@ input:focus{outline:none;border-color:var(--accent)}
       <button id="impRep" type="button" class="del">置き換えて読み込み</button>
     </div>
     <div><label>またはCSVファイル（UTF-8）を選択</label><input type="file" id="csvFile" accept=".csv,.txt,text/csv,text/plain"></div>
+    <div class="btns sm"><button id="instBtn" type="button" class="save" style="display:none">📲 アプリとしてインストール</button></div>
+    <div class="note" id="instNote"></div>
     <div class="note">復元・移行：保存したCSVの内容を貼り付けるかファイルを選び、読み込みボタンを押します。ICSは全予定を終日予定として出力するので、カレンダーアプリで開くと登録できます。color は0〜5の数字です。</div>
     <div class="btns"><button class="save" id="sclose" type="button">閉じる</button></div>
   </div>
@@ -350,14 +352,24 @@ input:focus{outline:none;border-color:var(--accent)}
       try{
         var out={};
         [180,192,512].forEach(function(z){var c=document.createElement("canvas");c.width=c.height=z;c.getContext("2d").drawImage(im,0,0,z,z);out[z]=c.toDataURL("image/png")});
+        var mk=document.createElement("canvas");mk.width=mk.height=512;var mx=mk.getContext("2d");mx.fillStyle="#f5dfbc";mx.fillRect(0,0,512,512);mx.drawImage(im,51,51,410,410);out.m=mk.toDataURL("image/png");
         link("apple-touch-icon",out[180],"180x180");
         link("icon",out[192],"192x192","image/png");
-        var mf={name:"カウントダウン予定帳",short_name:"予定帳",start_url:location.href,display:"standalone",background_color:"#f5dfbc",theme_color:"#f5dfbc",lang:"ja",icons:[{src:out[192],sizes:"192x192",type:"image/png"},{src:out[512],sizes:"512x512",type:"image/png",purpose:"any"}]};
-        link("manifest",URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"})));
+        var mf={name:"カウントダウン予定帳",short_name:"予定帳",start_url:location.origin+location.pathname,scope:location.origin+"/",id:location.origin+location.pathname,orientation:"portrait",categories:["productivity","lifestyle"],display:"standalone",background_color:"#f5dfbc",theme_color:"#f5dfbc",lang:"ja",icons:[{src:out[192],sizes:"192x192",type:"image/png"},{src:out[512],sizes:"512x512",type:"image/png",purpose:"any"},{src:out.m,sizes:"512x512",type:"image/png",purpose:"maskable"}]};
+        link("manifest","data:application/manifest+json,"+encodeURIComponent(JSON.stringify(mf)));
       }catch(e){}
     };
     im.src=src;
   })();
+
+  /* PWA install */
+  var dip=null;
+  window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dip=e;$("instBtn").style.display="block"});
+  $("instBtn").onclick=function(){if(!dip)return;dip.prompt();dip.userChoice.then(function(){dip=null;$("instBtn").style.display="none"})};
+  window.addEventListener("appinstalled",function(){$("instBtn").style.display="none";$("instNote").textContent="インストールしました"});
+  var sa=window.matchMedia&&matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  var isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  $("instNote").textContent=sa?"アプリとして起動中です":isIos?"iPhone/iPadは、Safariの共有ボタンから「ホーム画面に追加」を選んでください。":"Chromeでインストールできる状態になると、ここにインストールボタンが出ます。出ない場合はメニューの「アプリをインストール」または「ホーム画面に追加」を使ってください。";
 
   /* init */
   load();updateHeader();
